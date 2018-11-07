@@ -32,16 +32,16 @@ imaging_env = imaging_envs[0]
 
 data_root = '//133.24.88.18/sdb/Research/Drosophila/data/'
 
-morpho = 'adult'
 morpho = 'larva'
+morpho = 'adult'
 
 target_dir = '20180824-044058_56x56_277-576wells'
 target_dir = '20180827-230651_56x56_120-18wells'
-target_dir = '20181022-normal_noisy_empty'
 target_dir = '20181022-014033_with_noisy_well'
+target_dir = '20181022-normal_noisy_empty'
 
-rise_or_fall = 'rise'
 rise_or_fall = 'fall'
+rise_or_fall = 'rise'
 
 
 signals = np.load(
@@ -53,9 +53,12 @@ signals = np.load(
 groups = [range(96), range(96, 192), range(192, 288)]
 coefs = np.arange(-2, 20, .1)
 results = np.zeros((coefs.shape[0], signals.shape[1]))
-hists = []
+bins = np.linspace(0, signals.shape[1], 500)
+hist_images = []
 
 for group in groups:
+
+    hists = []
 
     for i, coef in enumerate(coefs):
 
@@ -72,16 +75,16 @@ for group in groups:
 
             auto_evals[auto_evals == signals.shape[1]] = 0
 
-        bincount = np.bincount(auto_evals)
-        results[i, :bincount.shape[0]] = bincount
+        ns, _ = np.histogram(auto_evals, bins)
+        hists.append(ns)
 
-    results = np.array(results)
-    hists.append(results)
+    hists = np.array(hists)
+    hist_images.append(hists)
 
 
 f = plt.figure()
 
-for i, hist_matrix in enumerate(hists):
+for i, hist_matrix in enumerate(hist_images):
 
     ax = f.add_subplot(len(groups), 1, i+1)
     im = ax.imshow(hist_matrix[:, 1:], origin='lower')
@@ -90,6 +93,8 @@ for i, hist_matrix in enumerate(hists):
     cb = f.colorbar(im, cax=cax)
 
     ax.set_title('Plate {}'.format(i+1))
+    ax.set_xticks(np.linspace(0, hist_matrix.shape[1], 5))
+    ax.set_xticklabels(np.linspace(0, signals.shape[1], 5))
     ax.set_yticks([0, len(coefs)])
     ax.set_yticklabels([coefs.min(), round(coefs.max())])
 
