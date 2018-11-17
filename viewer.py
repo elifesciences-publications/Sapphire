@@ -748,12 +748,17 @@ def callback(well_idx):
 # ====================================================
 @app.callback(
         Output('time-selector', 'value'),
-        [Input('signal-graph', 'clickData')])
-def callback(click_data):
+        [Input('signal-graph', 'clickData')],
+        [State('data-root', 'children'),
+         State('env-dropdown', 'value')])
+def callback(click_data, data_root, env):
+
+    # Guard
     if click_data is None:
         return 0
-    else:
-        return click_data['points'][0]['x']
+
+    return list(np.array(store_timestamps(data_root, env))[:, 1]).index(
+            click_data['points'][0]['x'])
 
 
 # =========================================
@@ -824,6 +829,8 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
     # If a manual data exists, draw it
     manual_data = []
 
+    x_data = [datetime.datetime.strptime(i, '%Y-%m-%d %H:%M:%S') for i in list(np.array(store_timestamps(data_root, env))[:, 1])]
+
     if csv is None:
         pass
 
@@ -833,7 +840,10 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
         manual_data = [
                 {
                     # Manual evaluation time (vertical line)
-                    'x': [manual_evals[well_idx], manual_evals[well_idx]],
+                    'x': [
+                        x_data[manual_evals[well_idx]],
+                        x_data[manual_evals[well_idx]]
+                    ],
                     'y': [0, signals.max()],
                     'mode': 'lines',
                     'name': 'Manual',
@@ -846,7 +856,10 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
             'data': manual_data + [
                 {
                     # Auto evaluation time (vertical line)
-                    'x': [auto_evals[well_idx], auto_evals[well_idx]],
+                    'x': [
+                        x_data[auto_evals[well_idx]],
+                        x_data[auto_evals[well_idx]]
+                    ],
                     'y': [0, signals.max()],            
                     'name': 'Auto',
                     'mode':'lines',
@@ -855,7 +868,10 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                 },
                 {
                     # Auto evaluation time (vertical line)
-                    'x': [auto_evals2[well_idx], auto_evals2[well_idx]],
+                    'x': [
+                        x_data[auto_evals2[well_idx]],
+                        x_data[auto_evals2[well_idx]]
+                    ],
                     'y': [0, luminance_signals.max()],
                     'mode': 'lines',
                     'name': 'Auto',
@@ -864,7 +880,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                 },
                 {
                     # Signal
-                    'x': list(range(len(signals[0, :]))),
+                    'x': x_data[:-1],
                     'y': list(signals[well_idx]),
                     'mode': 'lines',
                     'marker': {'color': '#4169e1'},
@@ -874,7 +890,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                 },
                 {
                     # Luminance signal
-                    'x': list(range(luminance_signals.shape[1])),
+                    'x': x_data[:-1],
                     'y': list(luminance_signals[well_idx,:]),
                     'mode': 'lines',
                     'line': {'color': '#20b2aa'},
@@ -883,7 +899,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                 },
                 {
                     # Threshold (horizontal line)
-                    'x': [0, len(signals[0, :])],
+                    'x': [x_data[0], x_data[-1]],
                     'y': [threshold[well_idx, 0], threshold[well_idx, 0]],
                     'mode': 'lines',
                     'name': 'Threshold',
@@ -892,7 +908,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                 },
                 {
                     # Threshold2 (horizontal line)
-                    'x': [0, len(signals[0, :])],
+                    'x': [x_data[0], x_data[-1]],
                     'y': [threshold2, threshold2],
                     'mode': 'lines',
                     'name': 'Threshold2',
@@ -902,7 +918,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
 
                 {
                     # Selected data point
-                    'x': [x],
+                    'x': [x_data[x]],
                     'y': [y],
                     'mode': 'markers',
                     'marker': {'size': 10, 'color': '#ff0000'},
@@ -922,6 +938,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                     'xaxis': {
                         'title': 'Time step',
                         'tickfont': {'size': 15},
+                        'tickformat': '%d %b %Y %H:%M',
                     },
                     'yaxis2': {
                         'title': 'Diff. of ROI',
@@ -937,7 +954,7 @@ def callback(well_idx, coef, threshold2, positive_or_negative, time, checks,
                 },
                 'showlegend': False,
                 'hovermode': 'closest',
-                'margin': go.layout.Margin(l=50, r=70, b=50, t=50, pad=0),
+                'margin': go.layout.Margin(l=50, r=70, b=100, t=50, pad=0),
             },
         }
 
