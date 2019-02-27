@@ -12,6 +12,7 @@ import os
 import glob
 import dash
 import json
+import time
 import base64
 import zipfile
 import datetime
@@ -1205,6 +1206,85 @@ def callback(options, data_root, dataset_name):
         return None
 
     return options[0]['value']
+
+
+# =====================================================
+#  
+# =====================================================
+@app.callback(
+        Output('larva-thresh-heatmap', 'figure'),
+        [Input('larva-signal', 'figure')],
+        [State('data-root', 'children'),
+         State('env-dropdown', 'value'),
+         State('detect-target', 'value'),
+         State('larva-dropdown', 'value'),
+         State('well-selector', 'value'),
+         State('larva-signal-type', 'value'),
+         State('larva-thresh-selector', 'value'),
+         State('hidden-midpoint', 'data'),
+         State('larva-weight-check', 'values'),
+         State('larva-weight-style', 'value'),
+         State('larva-smoothing-check', 'values'),
+         State('larva-window-size', 'value'),
+         State('larva-window-sigma', 'value'),
+         State('larva-thresh', 'max'),
+         State('larva-thresh', 'min'),
+         State('larva-thresh', 'step')])
+def callback(_, data_root, dataset_name, detect, larva, well_idx, signal_name, coef, midpoints, weighting, weight_style, smoothing, size, sigma, coef_max, coef_min, coef_step):
+    # Guard
+    if dataset_name is None or larva is None or signal_name is None:
+        print('matsu')
+        return {'data': []}
+
+    t1 = time.time()
+    # Load the data
+    larva_diffs = np.load(os.path.join(data_root,
+            dataset_name, 'inference', 'larva', larva, signal_name)).T
+    print('1. Elapsed time: {}'.format(time.time() - t1))
+
+    coefs = np.arange(coef_min, coef_max, coef_step)
+    thresholds_list = [
+            THRESH_FUNC(larva_diffs, coef=coef) for coef in coefs]
+    print('2. Elapsed time: {}'.format(time.time() - t1))
+
+    larva_diffs = seasoning(
+            larva_diffs, 'larva', detect, size, sigma,
+            smooth=len(smoothing) != 0,
+            weight=len(weighting) != 0,
+            pupar_times=None,
+            midpoints=midpoints,
+            weight_style=weight_style)
+    print('3. Elapsed time: {}'.format(time.time() - t1))
+
+    bincounts = []
+    for i, thresholds in enumerate(thresholds_list):
+        auto_evals = detect_event(larva_diffs, thresholds, 'larva', detect)
+        bincount = np.bincount(
+                auto_evals[auto_evals > 0], minlength=len(larva_diffs.T))
+        bincounts.append(bincount)
+
+    print('4. Elapsed time: {}'.format(time.time() - t1))
+    return {
+            'data': [
+                {
+                    'z': list(bincounts),
+                    'y': list(coefs),
+                    'type': 'surface',
+                    'colorscale': 'YlGnBu',
+                },
+            ],
+            'layout': {
+                'width': 500,
+                'height': 500,
+                'margin': go.layout.Margin(l=0, b=0, t=20, r=0),
+                'xaxis': {
+                    'automargin': True,
+                },
+                'yaxis': {
+                    'automargin': True,
+                },
+            }
+        }
 
 
 # =====================================================
