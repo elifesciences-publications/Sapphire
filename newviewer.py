@@ -14,6 +14,7 @@ import dash
 import json
 import time
 import base64
+import plotly
 import zipfile
 import datetime
 import PIL.Image
@@ -1282,8 +1283,23 @@ def callback(_, data_root, dataset_name, detect, larva, well_idx, signal_name, c
                 },
             ]
 
+        return {
+                'data': data_list,
+                'layout': {
+                    'width': 500,
+                    'height': 500,
+                    'margin': go.layout.Margin(l=0, b=0, t=20, r=0),
+                    'xaxis': {
+                        'automargin': True,
+                    },
+                    'yaxis': {
+                        'automargin': True,
+                    },
+                }
+            }
+
     else:
-        data_list = []
+        data_list = plotly.tools.make_subplots(rows=3, cols=4, shared_xaxes=True, shared_yaxes=True, vertical_spacing=0.1)
 
         for group_idx, group_table in enumerate(group_tables):
             bincounts = []
@@ -1299,32 +1315,21 @@ def callback(_, data_root, dataset_name, detect, larva, well_idx, signal_name, c
                 bincount = bincount + group_idx * 20
                 bincounts.append(list(bincount))
 
-            data_list.append(
+            row, clm = np.unravel_index(group_idx, [3, 4])
+            row, clm = int(row), int(clm)
+            data_list.append_trace(
                 {
                     'z': bincounts,
                     'y': list(coefs),
-                    'type': 'surface',
+                    'type': 'heatmap',
                     'colorscale': 'YlGnBu',
                     'opacity': 0.9,
-                })
+                }, row+1, clm+1)
 
-    print('4. Elapsed time: {}'.format(time.time() - t1))
+        print('4. Elapsed time: {}'.format(time.time() - t1))
 
-    # print(data_list)
-    return {
-            'data': data_list,
-            'layout': {
-                'width': 500,
-                'height': 500,
-                'margin': go.layout.Margin(l=0, b=0, t=20, r=0),
-                'xaxis': {
-                    'automargin': True,
-                },
-                'yaxis': {
-                    'automargin': True,
-                },
-            }
-        }
+        data_list['layout'].update(height=500, width=500, title='matsu')
+        return  data_list
 
 
 # =====================================================
