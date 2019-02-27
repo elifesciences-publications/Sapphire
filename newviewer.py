@@ -1229,8 +1229,9 @@ def callback(options, data_root, dataset_name):
          State('larva-window-sigma', 'value'),
          State('larva-thresh', 'max'),
          State('larva-thresh', 'min'),
-         State('larva-thresh', 'step')])
-def callback(_, data_root, dataset_name, detect, larva, well_idx, signal_name, coef, midpoints, weighting, weight_style, smoothing, size, sigma, coef_max, coef_min, coef_step):
+         State('larva-thresh', 'step'),
+         State('hidden-blacklist', 'data')])
+def callback(_, data_root, dataset_name, detect, larva, well_idx, signal_name, coef, midpoints, weighting, weight_style, smoothing, size, sigma, coef_max, coef_min, coef_step, blacklist):
     # Guard
     if dataset_name is None or larva is None or signal_name is None:
         print('matsu')
@@ -1256,23 +1257,62 @@ def callback(_, data_root, dataset_name, detect, larva, well_idx, signal_name, c
             weight_style=weight_style)
     print('3. Elapsed time: {}'.format(time.time() - t1))
 
-    bincounts = []
-    for i, thresholds in enumerate(thresholds_list):
-        auto_evals = detect_event(larva_diffs, thresholds, 'larva', detect)
-        bincount = np.bincount(
-                auto_evals[auto_evals > 0], minlength=len(larva_diffs.T))
-        bincounts.append(bincount)
+    # Target wells will be evaluated
+    exceptions = blacklist['value']
+    targets = np.logical_not(exceptions)
 
-    print('4. Elapsed time: {}'.format(time.time() - t1))
-    return {
-            'data': [
+    # Create data points
+    group_tables = load_grouping_csv(data_root, dataset_name)
+
+    if group_tables == []:
+        bincounts = []
+        for i, thresholds in enumerate(thresholds_list):
+            auto_evals = detect_event(larva_diffs, thresholds, 'larva', detect)
+            bincount = np.bincount(
+                    auto_evals[auto_evals > 0], minlength=len(larva_diffs.T))
+            bincounts.append(bincount)
+
+        data_list = [
                 {
                     'z': list(bincounts),
                     'y': list(coefs),
                     'type': 'surface',
                     'colorscale': 'YlGnBu',
+                    'opacity': 0.9,
                 },
-            ],
+            ]
+
+    else:
+        data_list = []
+
+        for group_idx, group_table in enumerate(group_tables):
+            bincounts = []
+
+            for i, thresholds in enumerate(thresholds_list):
+                auto_evals = detect_event(
+                        larva_diffs, thresholds, 'larva', detect)
+                auto_evals = auto_evals[np.logical_and(targets, group_table)]
+                auto_evals = auto_evals[auto_evals > 0]
+
+                bincount = np.bincount(
+                        auto_evals, minlength=len(larva_diffs.T))
+                bincount = bincount + group_idx * 20
+                bincounts.append(list(bincount))
+
+            data_list.append(
+                {
+                    'z': bincounts,
+                    'y': list(coefs),
+                    'type': 'surface',
+                    'colorscale': 'YlGnBu',
+                    'opacity': 0.9,
+                })
+
+    print('4. Elapsed time: {}'.format(time.time() - t1))
+
+    # print(data_list)
+    return {
+            'data': data_list,
             'layout': {
                 'width': 500,
                 'height': 500,
