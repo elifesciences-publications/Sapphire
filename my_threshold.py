@@ -8,8 +8,10 @@
 # Copyright (C) 2018 Taishi Matsumura
 #
 import numpy as np
+import numba
 
 
+@numba.jit(nopython=True)
 def entire_stats(signals, coef=2):
 
     threshold = signals.mean() + coef * signals.std()
