@@ -367,6 +367,17 @@ app.layout = html.Div([
                         }),
                     ], style={'width': '810px', 'margin-top': '10px'}),
 
+                    dcc.Graph(
+                        id='larva-thresh-heatmap',
+                        figure={'data': [], 'type': 'heatmap'},
+                        style={
+                            'display': 'table-cell',
+                            'vertical-align': 'top',
+                            'height': '240px',
+                            'width': '550px',
+                        },
+                    ),
+
                     html.Div(id='adult-signal-div', children=[
                         html.Div([
                             html.Div([
