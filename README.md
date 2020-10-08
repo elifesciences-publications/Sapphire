@@ -1,3 +1,8 @@
+This code is associated with the paper from Seong et al., "The Drosophila Individual Activity
+Monitoring and Detection System
+(DIAMonDS)". eLife, 2020. http://doi.org/10.7554/eLife.58630
+
+
 # Sapphire
 
 Life-event detection algorithm and software.
